@@ -1,0 +1,7 @@
+apiVersion: v2
+appVersion: 0.0.1
+description: Helm chart for fpost-app
+home: https://git.fpost.com/devops/helm-chart-example
+name: fpost-app
+type: application
+version: 0.0.1

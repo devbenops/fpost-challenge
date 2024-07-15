@@ -1,0 +1,212 @@
+include:
+  - project: "devops/gitlab-templates"
+    file: "/Security/secrets-check.gitlab-ci.yml"
+
+  # Infrastructure as Code (IaC) Scanning scans your IaC configuration files for known vulnerabilities.
+  - project: "devops/gitlab-templates"
+    file: "/Security/kics-iac-scan.gitlab-ci.yml"
+
+image: git.fpost.com:4567/fpost/docker-images/infrastructure:v1
+
+variables:
+  DOCKER_DRIVER: overlay
+  APPNAME: infrastructure
+  # Fastzip is a performant archiver for cache/artifact archiving and extraction
+  FF_USE_FASTZIP: 1
+
+stages:
+  - test
+  - prepare
+  - validate
+  - plan
+  - apply
+
+### terraform
+
+.terraform_prepare:
+  only:
+    refs:
+      - merge_requests
+      - production
+  allow_failure: false
+  tags:
+    - infra
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/environments/$BUILD_ENV
+  script:
+    - cd $TF_ROOT
+    - rm -rf .terraform/
+    - terraform init
+  artifacts:
+    name: $BUILD_ENV
+    paths:
+      - ${TF_ROOT}/.terraform
+      - ${TF_ROOT}/.terraform.lock.hcl
+
+.terraform_validate:
+  only:
+    refs:
+      - merge_requests
+      - production
+  allow_failure: false
+  tags:
+    - infra
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/environments/$BUILD_ENV
+  script:
+    script:
+    - cd $TF_ROOT
+    - terraform init -backend=false
+    - terraform validate
+
+.terraform_plan:
+  only:
+    refs:
+      - merge_requests
+      - production
+  except:
+    - schedules
+  before_script:
+    - shopt -s expand_aliases
+    - alias convert_report="jq -r '([.resource_changes[]?.change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
+  allow_failure: false
+  tags:
+    - infra
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/environments/$BUILD_ENV
+  script:
+    - cd $TF_ROOT
+    - terraform plan -out=$BUILD_ENV.plan
+    - terraform show -json $BUILD_ENV.plan | convert_report > $BUILD_ENV.json
+  artifacts:
+    paths:
+      - ${TF_ROOT}/$BUILD_ENV.plan
+    reports:
+      terraform: ${TF_ROOT}/$BUILD_ENV.json
+
+.terraform_apply:
+  only:
+    refs:
+      - production
+  except:
+    - schedules
+  allow_failure: false
+  tags:
+    - infra
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/environments/$BUILD_ENV
+  when: manual
+  script:
+    - cd $TF_ROOT
+    - terraform apply -auto-approve $BUILD_ENV.plan
+
+.terraform_drift:
+  stage: plan
+  tags:
+    - infra
+  only:
+    - schedules
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/environments/$BUILD_ENV
+  script:
+    - cd $TF_ROOT
+    - terraform plan -detailed-exitcode -out=$BUILD_ENV.plan 2> /dev/null || ec=$?
+    - |
+      put TF drift code 
+
+### Develop
+
+develop_prepare:
+  extends: .terraform_prepare
+  stage: prepare
+  variables:
+    BUILD_ENV: develop
+  only:
+    changes:
+      - envs/develop/**/*
+
+develop_validate:
+  extends: .terraform_validate
+  stage: validate
+  variables:
+    BUILD_ENV: develop
+  only:
+    changes:
+      - envs/develop/**/*
+
+develop_plan:
+  extends: .terraform_plan
+  stage: plan
+  variables:
+    BUILD_ENV: develop
+  only:
+    changes:
+      - envs/develop/**/*
+
+develop_apply:
+  extends: .terraform_apply
+  stage: apply
+  variables:
+    BUILD_ENV: develop
+  only:
+    changes:
+      - envs/develop/**/*
+
+develop_drift:
+  extends: .terraform_drift
+  stage: plan
+  tags:
+    - infra
+  variables:
+    BUILD_ENV: develop
+  only:
+    - schedules
+
+### Production
+
+production_prepare:
+  extends: .terraform_prepare
+  stage: prepare
+  variables:
+    BUILD_ENV: production
+  only:
+    changes:
+      - envs/production/**/*
+
+production_validate:
+  extends: .terraform_validate
+  stage: validate
+  variables:
+    BUILD_ENV: production
+  only:
+    changes:
+      - envs/production/**/*
+
+production_plan:
+  extends: .terraform_plan
+  stage: plan
+  variables:
+    BUILD_ENV: production
+  only:
+    changes:
+      - envs/production/**/*
+
+production_apply:
+  extends: .terraform_apply
+  stage: apply
+  variables:
+    BUILD_ENV: production
+  only:
+    changes:
+      - envs/production/**/*
+
+production_drift:
+  extends: .terraform_drift
+  stage: plan
+  tags:
+    - infra
+  variables:
+    BUILD_ENV: production
+  only:
+    - schedules
+

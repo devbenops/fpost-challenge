@@ -1,0 +1,3 @@
+# Disclaimer on the helm chart and the deployment 
+
+For the Helm chart, I assume the use of HashiCorp Vault and External Secrets for secret management. I also added some additinal resources like pod disruption budget and netwok policy for the benefit of the backend application.

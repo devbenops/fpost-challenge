@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fpost-app.fullname" . }}-network-policy
+  labels: {{ include "fpost-app.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{ include "fpost-app.selectorLabels" . | nindent 6 }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: fpost-app-b
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - ipBlock:
+        cidr: {{ .Values.config.DB_VPC_CIDR }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.config.DB_PORT }}
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 443

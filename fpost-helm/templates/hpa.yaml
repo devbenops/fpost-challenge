@@ -1,0 +1,18 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "fpost-app.fullname" . }}
+spec:
+  maxReplicas: {{ .Values.maxReplicas }}
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 70
+          type: Utilization
+      type: Resource
+  minReplicas: {{ .Values.minReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "fpost-app.fullname" . }}

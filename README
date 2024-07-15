@@ -1,0 +1,51 @@
+Question 5(Bonus):
+What triggers for scalability would you use for:
+• Backend servers
+• Database performance
+• Service Bus performance (RabbitMQ | Azure Service Bus)
+• Docker + Kubernetes
+Please use a detailed textual description per above mentioned case/service
+
+# Backend Servers
+
+CPU/Memory Utilization
+Incoming Request Rate
+Error Rate
+
+We can scale the backend servers on different metrics, such as CPU usage consistently exceeds, say, 70% or If the memory usage goes above 80% for a while.
+Also, When the number of incoming requests per second spikes beyond a limit and HTTP errors like 5xx( for this, we also need to investigate to find the underlying issues)
+
+# Database Performance
+
+If we are using Azure Database for PostgreSQL, there are several scalability options we can use to ensure optimal performance as demand grows.
+
+Vertical scaling -  If there is a consistent high CPU or memory usage, we can scale up the database-  Increase the compute resources (vCores and memory).
+
+storage - When the storage usage is high and approaches the allocated limit,  Increase the storage capacity.
+
+Read Replicas( Horizontal scaling ) -  If the application is highly read intensive  or when read queries start to slow down due to load, we create read replicas. Normally,Azure PostgreSQL supports up to five read replicas in the same region.
+
+Other performance options on a general DB overview( including nosql,sql DBs):
+    - Query optimization ( slow queries)
+    - indexing
+    - scharding
+    - multi az/ or geo location deployment for high availablity based on the cloud provider
+
+# Service Bus Performance (RabbitMQ | Azure Service Bus)
+
+clustering - The distributed messaging system like RabbitMQ, kafka or Azure Service Bus can be configured in clustering, which allows multiple nodes to share the workload
+partitioning - Distributes load across multiple partitions
+Consumer groups in kafka- Enables fault tolerance and autoscaling
+
+The scalability triggers can be:
+  - Exceeds Number of partition count in one node the cluster( possible scenario if we use cloud managed kafka cluster and they have stringent policy on number of partitions)
+  - Message queue length: Add more consumers to process messages faster
+  - Efficient use of consumer groups to process from same partitions for multiple applications
+
+# Docker + Kubernetes
+
+- Container CPU/Memory utilization : Use HPA and autoscale the number of instances
+- Request count : Implement HPA with custom metrics to autoscale deployment if specified threshold exceeds
+- Latency : we can use prometheus or such monitoring tool to fetch metrics and integrate with HPA to scale with latency metrics ( Example if latency is 100ms, scale out)
+- Cluster autoscaler: Scale out/in number of nodes in the cluster based on CPU/RAM, in other words if a pod is pedning to be scheduled in the cluster
+- Use of VPA in auto mode( although its not recommened since it will cause pod restart and downtime), we can use it as Recommendation mode

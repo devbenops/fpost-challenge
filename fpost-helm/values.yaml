@@ -1,0 +1,9 @@
+gitlab:
+  group: backend
+  projectid: '240'
+  projectname: fpost-app
+  
+replicas: 3
+
+config:
+  DB_PORT: "5432"

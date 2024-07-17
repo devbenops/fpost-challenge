@@ -20,7 +20,7 @@ spec:
   egress:
   - to:
     - ipBlock:
-        cidr: {{ .Values.config.DB_VPC_CIDR }}
+        cidr: {{ .Values.config.DB_vnet_CIDR }}
     ports:
     - protocol: TCP
       port: {{ .Values.config.DB_PORT }}

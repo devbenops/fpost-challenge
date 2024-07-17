@@ -5,7 +5,7 @@ image:
   tag: latest
 config:
   ENV_NAME: production
-  DB_VPC_CIDR: "10.0.1.0/20"
+  DB_vnet_CIDR: "10.0.1.0/20"
 
 maxReplicas: 10
 resources:
